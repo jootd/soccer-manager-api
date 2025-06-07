@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/jootd/soccer-manager/business"
 	"golang.org/x/crypto/bcrypt"
@@ -104,6 +105,15 @@ func (ah *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Authorization", "Bearer "+token)
+	http.SetCookie(w, &http.Cookie{
+		Name:     "donottouchme",
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+		Expires:  time.Now().Add(1 * time.Hour),
+	})
+
 	w.Write([]byte(fmt.Sprintf("Logged in. Token: %s, userStore %+v", token, user)))
 }

@@ -77,5 +77,4 @@ func (us *UserStore) UpdateUser(ctx context.Context, username string, teamId int
 	us.mem[username] = fromUser(user)
 
 	return user, nil
-
 }

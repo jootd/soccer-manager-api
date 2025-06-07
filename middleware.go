@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -32,19 +31,13 @@ func CreateAuthMiddleware(userbus *business.UserBus, teambus *business.TeamBus) 
 	return func(next http.HandlerFunc) http.HandlerFunc {
 
 		return func(w http.ResponseWriter, r *http.Request) {
-			authHeader := r.Header.Get("Authorization")
-			if authHeader == "" {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
+			cookie, err := r.Cookie("donottouchme")
+			if err != nil {
+				http.Error(w, "unauthorized: missing or invalid cookie", http.StatusUnauthorized)
 				return
 			}
 
-			// Remove "Bearer " prefix
-			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-			if tokenString == authHeader {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
-				return
-			}
-
+			tokenString := cookie.Value
 			username, err := validateJWT(tokenString)
 			if err != nil {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
