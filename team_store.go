@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
+	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/jootd/soccer-manager/business"
@@ -15,8 +16,9 @@ type dbTeam struct {
 }
 
 type TeamStore struct {
-	mu  sync.RWMutex
-	mem map[int]dbTeam
+	mutex sync.RWMutex
+	mem   map[int]dbTeam
+	idSeq int
 }
 
 func toTeam(db dbTeam) business.Team {
@@ -24,6 +26,14 @@ func toTeam(db dbTeam) business.Team {
 		ID:      db.ID,
 		Name:    db.Name,
 		Country: db.Country,
+	}
+}
+
+func fromTeam(team business.Team) dbTeam {
+	return dbTeam{
+		ID:      team.ID,
+		Name:    team.Name,
+		Country: team.Country,
 	}
 }
 
@@ -35,36 +45,61 @@ func toTeamSlice(dbTeams []dbTeam) []business.Team {
 	return teams
 }
 
-func (dt *TeamStore) GetTeamsBy(ctx context.Context, query business.QueryTeam) ([]business.Team, bool) {
-
-	if query.ID != nil {
-		db, ok := dt.mem[*query.ID]
-		if !ok {
-			return []business.Team{}, false
-		}
-
-		return toTeamSlice([]dbTeam{db}), true
-	}
-
-	// if no filter applied return all
+func (dt *TeamStore) all(ctx context.Context) []business.Team {
 	allDb := []dbTeam{}
 	for _, db := range dt.mem {
 		allDb = append(allDb, db)
 	}
-
-	return toTeamSlice(allDb), true
+	return toTeamSlice(allDb)
 }
 
-func (dt *TeamStore) UpdateTeam(ctx context.Context, team business.UpdateTeam) (business.Team, bool) {
-	dbTeam := dbTeam{}
-
-	return toTeam(dbTeam), true
-}
-func (dt *TeamStore) CreateTeam(ctx context.Context) (business.Team, bool) {
-	dbTeam := dbTeam{
-		ID:      len(dt.mem) + 1,
-		Name:    rand.Text(),
-		Country: rand.Text()[:2],
+func (dt *TeamStore) GetTeamsBy(ctx context.Context, query business.QueryTeam) ([]business.Team, error) {
+	dt.mutex.RLock()
+	defer dt.mutex.RUnlock()
+	if query.ID != nil {
+		db, ok := dt.mem[*query.ID]
+		if !ok {
+			return []business.Team{}, errors.New("store:GetTeamsBy:not_found")
+		}
+		return toTeamSlice([]dbTeam{db}), nil
 	}
-	return toTeam(dbTeam), true
+
+	return dt.all(ctx), nil
+}
+
+func (dt *TeamStore) UpdateTeam(ctx context.Context, updates business.UpdateTeam) (business.Team, error) {
+	result, err := dt.GetTeamsBy(ctx, business.QueryTeam{ID: &updates.Id})
+	if err != nil {
+		return business.Team{}, fmt.Errorf("store:UpdateTeam:%w", err)
+	}
+
+	needsUpdate := result[0]
+	if updates.Country != nil {
+		needsUpdate.Country = *updates.Country
+	}
+	if updates.Name != nil {
+		needsUpdate.Name = *updates.Name
+	}
+
+	dt.mutex.Lock()
+	defer dt.mutex.Unlock()
+	dt.mem[needsUpdate.ID] = fromTeam(needsUpdate)
+
+	return needsUpdate, nil
+}
+
+func (dt *TeamStore) CreateTeam(ctx context.Context, new business.CreateTeam) (business.Team, error) {
+	dt.mutex.Lock()
+	defer dt.mutex.Unlock()
+	dt.idSeq++
+	newId := dt.idSeq
+
+	newTeam := dbTeam{
+		ID:      newId,
+		Name:    new.Name,
+		Country: new.Country,
+	}
+
+	dt.mem[newId] = newTeam
+	return toTeam(newTeam), nil
 }

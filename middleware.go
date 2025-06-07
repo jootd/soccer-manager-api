@@ -56,11 +56,13 @@ func CreateJWTMiddleware(userbus *business.UserBus, teambus *business.TeamBus) f
 				return
 			}
 
-			team, err := teambus.GetTeamBy(r.Context(), business.QueryTeam{ID: &user.TeamId})
+			teams, err := teambus.GetTeamsBy(r.Context(), business.QueryTeam{ID: &user.TeamId})
 			if err != nil {
 				http.Error(w, "team_not_found", http.StatusNotFound)
 				return
 			}
+
+			team := teams[0]
 
 			ctx := context.WithValue(r.Context(), UsernameContextKey, username)
 			ctx = context.WithValue(ctx, UserContextKey, user)

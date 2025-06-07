@@ -1,6 +1,10 @@
 package business
 
-import "context"
+import (
+	"context"
+	"crypto/rand"
+	"fmt"
+)
 
 type Team struct {
 	ID      int
@@ -9,8 +13,14 @@ type Team struct {
 }
 
 type UpdateTeam struct {
+	Id      int
 	Name    *string
 	Country *string
+}
+
+type CreateTeam struct {
+	Name    string
+	Country string
 }
 
 type QueryTeam struct {
@@ -20,9 +30,9 @@ type QueryTeam struct {
 }
 
 type TeamStorer interface {
-	GetTeamsBy(ctx context.Context, query QueryTeam) ([]Team, bool)
-	UpdateTeam(ctx context.Context, team UpdateTeam) (Team, bool)
-	CreateTeam(ctx context.Context) (Team, bool)
+	GetTeamsBy(ctx context.Context, query QueryTeam) ([]Team, error)
+	UpdateTeam(ctx context.Context, updates UpdateTeam) (Team, error)
+	CreateTeam(ctx context.Context, team CreateTeam) (Team, error)
 }
 
 type TeamBus struct {
@@ -35,15 +45,33 @@ func NewTeamBus(store TeamStorer) *TeamBus {
 	}
 }
 
-func (tb *TeamBus) GetTeamBy(ctx context.Context, query QueryTeam) (Team, error) {
-	return Team{}, nil
+func (tb *TeamBus) GetTeamsBy(ctx context.Context, query QueryTeam) ([]Team, error) {
+	teams, err := tb.store.GetTeamsBy(ctx, query)
+	if err != nil {
+		return []Team{}, fmt.Errorf("bus:GetTeamsBy:%w", err)
+	}
+
+	return teams, nil
 }
 
 func (tb *TeamBus) CreateTeam(ctx context.Context) (Team, error) {
-	return Team{}, nil
+	team, err := tb.store.CreateTeam(ctx, CreateTeam{
+		Name:    "team" + rand.Text(),
+		Country: "country" + rand.Text(),
+	})
+
+	if err != nil {
+		return Team{}, fmt.Errorf("bus:CreateTeam:%w", err)
+	}
+	return team, nil
 
 }
 
-func (tb *TeamBus) UpdateTeam(ctx context.Context, updateTeam UpdateTeam) (Team, error) {
-	return Team{}, nil
+func (tb *TeamBus) UpdateTeam(ctx context.Context, updates UpdateTeam) (Team, error) {
+	team, err := tb.store.UpdateTeam(ctx, updates)
+	if err != nil {
+		return Team{}, fmt.Errorf("bus:UpdateTeam:%w", err)
+	}
+
+	return team, nil
 }

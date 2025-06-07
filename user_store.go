@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/jootd/soccer-manager/business"
@@ -14,8 +16,8 @@ type dbUser struct {
 }
 
 type UserStore struct {
-	mem map[string]dbUser
-	mu  sync.RWMutex
+	mem   map[string]dbUser
+	mutex sync.RWMutex
 }
 
 func toUser(db dbUser) business.User {
@@ -26,48 +28,55 @@ func toUser(db dbUser) business.User {
 	}
 }
 
-func (us *UserStore) GetUser(ctx context.Context, username string) (business.User, bool) {
-	us.mu.RLock()
-	defer us.mu.RUnlock()
+func fromUser(user business.User) dbUser {
+	return dbUser{
+		Username: user.Username,
+		Password: user.Password,
+		TeamId:   user.TeamId,
+	}
+}
+
+func (us *UserStore) GetUser(ctx context.Context, username string) (business.User, error) {
+	us.mutex.RLock()
+	defer us.mutex.RUnlock()
 
 	dbUser, exists := us.mem[username]
 	if !exists {
-		return business.User{}, false
+		return business.User{}, errors.New("store:GetUser:not_found")
 	}
 
-	return toUser(dbUser), true
+	return toUser(dbUser), nil
 }
 
-func (us *UserStore) CreateUser(ctx context.Context, username string, passHash string) (business.User, bool) {
-	us.mu.Lock()
-	defer us.mu.Unlock()
-
-	newUser := dbUser{Username: username, Password: passHash}
-	us.mem[username] = newUser
-
+func (us *UserStore) CreateUser(ctx context.Context, username string, passHash string) (business.User, error) {
+	us.mutex.Lock()
+	defer us.mutex.Unlock()
 	_, exists := us.mem[username]
-
-	if !exists {
-		return business.User{}, false
+	if exists {
+		return business.User{}, errors.New("store:CreateUser:duplicate_username")
 	}
 
-	return toUser(newUser), true
+	newDbUser := dbUser{
+		Username: username,
+		Password: passHash,
+	}
+	us.mem[username] = newDbUser
+
+	return toUser(newDbUser), nil
 }
 
-func (us *UserStore) UpdateUser(ctx context.Context, username string, teamId int) (business.User, bool) {
-	us.mu.Lock()
-	defer us.mu.Unlock()
+func (us *UserStore) UpdateUser(ctx context.Context, username string, teamId int) (business.User, error) {
+	us.mutex.Lock()
+	defer us.mutex.Unlock()
 
-	user, exists := us.mem[username]
-
-	if !exists {
-		return business.User{}, false
+	user, err := us.GetUser(ctx, username)
+	if err != nil {
+		return business.User{}, fmt.Errorf("store:UpdateUser:%w", err)
 	}
 
 	user.TeamId = teamId
+	us.mem[username] = fromUser(user)
 
-	us.mem[username] = user
-
-	return toUser(user), true
+	return user, nil
 
 }
