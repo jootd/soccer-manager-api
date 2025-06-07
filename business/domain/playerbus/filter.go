@@ -6,6 +6,6 @@ type QueryFilter struct {
 	FirstName *string
 	LastName  *string
 	Country   *string
-	ValueFrom *float64
-	ValueTo   *float64
+	ValueFrom *int64
+	ValueTo   *int64
 }

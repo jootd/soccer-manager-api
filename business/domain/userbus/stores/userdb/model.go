@@ -12,7 +12,7 @@ func toBusUser(db user) userbus.User {
 	return userbus.User{
 		Username: db.Username,
 		Password: db.Password,
-		TeamId:   db.TeamId,
+		TeamID:   db.TeamId,
 	}
 }
 
@@ -20,6 +20,6 @@ func toDBUser(bus userbus.User) user {
 	return user{
 		Username: bus.Username,
 		Password: bus.Password,
-		TeamId:   bus.TeamId,
+		TeamId:   bus.TeamID,
 	}
 }

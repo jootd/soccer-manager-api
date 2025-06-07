@@ -24,7 +24,6 @@ func (up *Business) Update(ctx context.Context, player UpdatePlayer) (Player, er
 	updated, err := up.store.Update(ctx, player)
 	if err != nil {
 		return Player{}, fmt.Errorf("playerbus:Update:%w", err)
-
 	}
 
 	return updated, nil

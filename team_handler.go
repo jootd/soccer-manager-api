@@ -16,13 +16,13 @@ type TeamHandler struct {
 	teamBus *teambus.Business
 }
 
-func NewTeamHandler(teamBus *teambus.Business) *TeamHandler {
+func NewHandler(teamBus *teambus.Business) *TeamHandler {
 	return &TeamHandler{
 		teamBus: teamBus,
 	}
 }
 
-func (tb *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
+func (tb *TeamHandler) Get(w http.ResponseWriter, r *http.Request) {
 	team := r.Context().Value(UserTeamContextKey)
 	teamBytes, err := json.Marshal(team)
 	if err != nil {
@@ -32,7 +32,7 @@ func (tb *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
 	w.Write(teamBytes)
 }
 
-func (tb *TeamHandler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
+func (tb *TeamHandler) Update(w http.ResponseWriter, r *http.Request) {
 	team := r.Context().Value(UserTeamContextKey)
 	team = team.(teambus.Team)
 
@@ -41,5 +41,4 @@ func (tb *TeamHandler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 
 	}
 	tb.teamBus.Update(r.Context(), teambus.UpdateTeam{})
-
 }

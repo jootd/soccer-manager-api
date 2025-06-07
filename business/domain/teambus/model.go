@@ -4,10 +4,11 @@ type Team struct {
 	ID      int
 	Name    string
 	Country string
+	Budget  int64
 }
 
 type UpdateTeam struct {
-	Id      int
+	ID      int
 	Name    *string
 	Country *string
 }
@@ -15,4 +16,5 @@ type UpdateTeam struct {
 type CreateTeam struct {
 	Name    string
 	Country string
+	Budget  int64
 }

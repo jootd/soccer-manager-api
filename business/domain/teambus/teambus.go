@@ -6,6 +6,10 @@ import (
 	"fmt"
 )
 
+const (
+	InitialTeamBudget = 5_000_000 //$
+)
+
 type Storer interface {
 	Query(ctx context.Context, query QueryFilter) ([]Team, error)
 	Update(ctx context.Context, updates UpdateTeam) (Team, error)
@@ -35,6 +39,7 @@ func (tb *Business) Create(ctx context.Context) (Team, error) {
 	team, err := tb.store.Create(ctx, CreateTeam{
 		Name:    "team" + rand.Text(),
 		Country: "country" + rand.Text(),
+		Budget:  InitialTeamBudget,
 	})
 
 	if err != nil {

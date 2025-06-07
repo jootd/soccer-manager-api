@@ -6,6 +6,7 @@ type team struct {
 	ID      int    `db:"id"`
 	Name    string `db:"name"`
 	Country string `db:"country"`
+	Budget  int64  `db:"budget"`
 }
 
 // Converts from local DB model to teambus model
@@ -14,6 +15,7 @@ func toBusTeam(team team) teambus.Team {
 		ID:      team.ID,
 		Name:    team.Name,
 		Country: team.Country,
+		Budget:  team.Budget,
 	}
 }
 
@@ -23,6 +25,7 @@ func toDBTeam(bt teambus.Team) team {
 		ID:      bt.ID,
 		Name:    bt.Name,
 		Country: bt.Country,
+		Budget:  bt.Budget,
 	}
 }
 

@@ -57,7 +57,7 @@ func (us *Memory) Update(ctx context.Context, username string, teamId int) (user
 
 	us.mutex.Lock()
 	defer us.mutex.Unlock()
-	user.TeamId = teamId
+	user.TeamID = teamId
 	us.mem[username] = toDBUser(user)
 
 	return user, nil

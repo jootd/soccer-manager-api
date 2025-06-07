@@ -34,14 +34,14 @@ func main() {
 	mux.HandleFunc("/signup", authHandler.Signup)
 	mux.HandleFunc("/login", authHandler.Login)
 
-	teamHandler := NewTeamHandler(teamBus)
+	teamHandler := NewHandler(teamBus)
 
 	mux.Handle("/team", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			teamHandler.GetTeam(w, r)
+			teamHandler.Get(w, r)
 		case http.MethodPut:
-			teamHandler.UpdateTeam(w, r)
+			teamHandler.Update(w, r)
 		}
 
 	})))

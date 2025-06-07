@@ -38,7 +38,7 @@ func (dt *Memory) Query(ctx context.Context, query teambus.QueryFilter) ([]teamb
 }
 
 func (dt *Memory) Update(ctx context.Context, updates teambus.UpdateTeam) (teambus.Team, error) {
-	result, err := dt.Query(ctx, teambus.QueryFilter{ID: &updates.Id})
+	result, err := dt.Query(ctx, teambus.QueryFilter{ID: &updates.ID})
 	if err != nil {
 		return teambus.Team{}, fmt.Errorf("memory:UpdateTeam:%w", err)
 	}
