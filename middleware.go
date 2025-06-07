@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -27,7 +28,7 @@ func generateJWT(username string) (string, error) {
 	return token.SignedString(jwtKey)
 }
 
-func CreateJWTMiddleware(userbus *business.UserBus, teambus *business.TeamBus) func(http.HandlerFunc) http.HandlerFunc {
+func CreateAuthMiddleware(userbus *business.UserBus, teambus *business.TeamBus) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 
 		return func(w http.ResponseWriter, r *http.Request) {
@@ -72,4 +73,12 @@ func CreateJWTMiddleware(userbus *business.UserBus, teambus *business.TeamBus) f
 			next.ServeHTTP(w, r)
 		}
 	}
+}
+
+func LoggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		next.ServeHTTP(w, r)
+		log.Printf("%s %s %v", r.Method, r.URL.Path, time.Since(start))
+	})
 }

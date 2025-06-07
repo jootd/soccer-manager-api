@@ -66,14 +66,13 @@ func (us *UserStore) CreateUser(ctx context.Context, username string, passHash s
 }
 
 func (us *UserStore) UpdateUser(ctx context.Context, username string, teamId int) (business.User, error) {
-	us.mutex.Lock()
-	defer us.mutex.Unlock()
-
 	user, err := us.GetUser(ctx, username)
 	if err != nil {
 		return business.User{}, fmt.Errorf("store:UpdateUser:%w", err)
 	}
 
+	us.mutex.Lock()
+	defer us.mutex.Unlock()
 	user.TeamId = teamId
 	us.mem[username] = fromUser(user)
 
