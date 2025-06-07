@@ -51,7 +51,7 @@ func CreateAuthMiddleware(userbus *userbus.Business, teamBus *teambus.Business) 
 				return
 			}
 
-			teams, err := teamBus.Query(r.Context(), teambus.QueryFilter{ID: &user.TeamId})
+			teams, err := teamBus.Query(r.Context(), teambus.QueryFilter{ID: &user.TeamID})
 			if err != nil {
 				http.Error(w, "team_not_found", http.StatusNotFound)
 				return

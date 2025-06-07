@@ -32,7 +32,7 @@ func FromTeam(team teambus.Team, players []playerbus.Player) TeamWithPlayers {
 			ID:        p.ID,
 			FirstName: p.FirstName,
 			LastName:  p.LastName,
-			Age:       p.Age,
+			Age:       p.Age.Value(),
 		}
 		teamValue += p.Value
 		viewPlayers = append(viewPlayers, viewPlayer)
