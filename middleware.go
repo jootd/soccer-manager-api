@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/jootd/soccer-manager/business"
+	"github.com/jootd/soccer-manager/business/domain/teambus"
+	"github.com/jootd/soccer-manager/business/domain/userbus"
 )
 
 type ContextKey string
@@ -27,7 +28,7 @@ func generateJWT(username string) (string, error) {
 	return token.SignedString(jwtKey)
 }
 
-func CreateAuthMiddleware(userbus *business.UserBus, teambus *business.TeamBus) func(http.HandlerFunc) http.HandlerFunc {
+func CreateAuthMiddleware(userbus *userbus.Business, teamBus *teambus.Business) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 
 		return func(w http.ResponseWriter, r *http.Request) {
@@ -44,13 +45,13 @@ func CreateAuthMiddleware(userbus *business.UserBus, teambus *business.TeamBus) 
 				return
 			}
 
-			user, err := userbus.GetUser(r.Context(), username)
+			user, err := userbus.Get(r.Context(), username)
 			if err != nil {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
 
-			teams, err := teambus.GetTeamsBy(r.Context(), business.QueryTeam{ID: &user.TeamId})
+			teams, err := teamBus.Query(r.Context(), teambus.QueryFilter{ID: &user.TeamId})
 			if err != nil {
 				http.Error(w, "team_not_found", http.StatusNotFound)
 				return

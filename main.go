@@ -7,7 +7,10 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
-	"github.com/jootd/soccer-manager/business"
+	"github.com/jootd/soccer-manager/business/domain/teambus"
+	"github.com/jootd/soccer-manager/business/domain/teambus/stores/teamdb"
+	"github.com/jootd/soccer-manager/business/domain/userbus"
+	"github.com/jootd/soccer-manager/business/domain/userbus/stores/userdb"
 )
 
 type RegisterRequest struct {
@@ -18,15 +21,11 @@ type RegisterRequest struct {
 func main() {
 	log.SetOutput(os.Stdout)
 
-	userStore := UserStore{
-		mem: make(map[string]dbUser),
-	}
-	teamStore := TeamStore{
-		mem: make(map[int]dbTeam),
-	}
+	userStore := userdb.NewMemory()
+	teamStore := teamdb.NewMemory()
 
-	userBus := business.NewUserBus(&userStore)
-	teamBus := business.NewTeamBus(&teamStore)
+	userBus := userbus.NewUserBus(userStore)
+	teamBus := teambus.NewTeamBus(teamStore)
 
 	authHandler := NewAuthHandler(userBus, teamBus)
 	authMiddleware := CreateAuthMiddleware(userBus, teamBus)

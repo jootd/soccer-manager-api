@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/jootd/soccer-manager/business"
+	"github.com/jootd/soccer-manager/business/domain/teambus"
 )
 
 type UpdateTeamRequest struct {
@@ -13,10 +13,10 @@ type UpdateTeamRequest struct {
 }
 
 type TeamHandler struct {
-	teamBus *business.TeamBus
+	teamBus *teambus.Business
 }
 
-func NewTeamHandler(teamBus *business.TeamBus) *TeamHandler {
+func NewTeamHandler(teamBus *teambus.Business) *TeamHandler {
 	return &TeamHandler{
 		teamBus: teamBus,
 	}
@@ -34,12 +34,12 @@ func (tb *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
 
 func (tb *TeamHandler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 	team := r.Context().Value(UserTeamContextKey)
-	team = team.(business.Team)
+	team = team.(teambus.Team)
 
 	var updates UpdateTeamRequest
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
 
 	}
-	tb.teamBus.UpdateTeam(r.Context(), business.UpdateTeam{})
+	tb.teamBus.Update(r.Context(), teambus.UpdateTeam{})
 
 }

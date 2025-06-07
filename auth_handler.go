@@ -7,16 +7,17 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jootd/soccer-manager/business"
+	"github.com/jootd/soccer-manager/business/domain/teambus"
+	"github.com/jootd/soccer-manager/business/domain/userbus"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthHandler struct {
-	userBus *business.UserBus
-	teamBus *business.TeamBus
+	userBus *userbus.Business
+	teamBus *teambus.Business
 }
 
-func NewAuthHandler(userBus *business.UserBus, teamBus *business.TeamBus) *AuthHandler {
+func NewAuthHandler(userBus *userbus.Business, teamBus *teambus.Business) *AuthHandler {
 	return &AuthHandler{
 		userBus: userBus,
 		teamBus: teamBus,
@@ -53,18 +54,18 @@ func (ah *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = ah.userBus.CreateUser(r.Context(), req.Username, string(hash))
+	_, err = ah.userBus.Create(r.Context(), req.Username, string(hash))
 	if err != nil {
 		http.Error(w, "user already exists", http.StatusConflict)
 		return
 	}
-	team, err := ah.teamBus.CreateTeam(r.Context())
+	team, err := ah.teamBus.Create(r.Context())
 	if err != nil {
 		http.Error(w, "something went wrong, please try again", http.StatusInternalServerError)
 		return
 	}
 
-	user, err := ah.userBus.UpdateUser(r.Context(), req.Username, team.ID)
+	user, err := ah.userBus.Update(r.Context(), req.Username, team.ID)
 	if err != nil {
 		http.Error(w, "something went wrong, please try again", http.StatusInternalServerError)
 		return
@@ -93,7 +94,7 @@ func (ah *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := ah.userBus.GetUser(r.Context(), req.Username)
+	user, err := ah.userBus.Get(r.Context(), req.Username)
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)) != nil {
 		http.Error(w, "username or password incorrect", http.StatusUnauthorized)
 		return
