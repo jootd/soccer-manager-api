@@ -3,8 +3,6 @@ package playerdb
 import (
 	"bytes"
 	"strings"
-
-	"github.com/jootd/soccer-manager/business/domain/playerbus"
 )
 
 func (s *Store) applyFilter(filter playerbus.QueryFilter, data map[string]any, buf *bytes.Buffer) {
@@ -21,8 +19,8 @@ func (s *Store) applyFilter(filter playerbus.QueryFilter, data map[string]any, b
 	}
 
 	if filter.FirstName != nil {
-		data["name"] = filter.FirstName
-		wc = append(wc, "name = :first_name")
+		data["first_namename"] = filter.FirstName
+		wc = append(wc, "first_name = :first_name")
 	}
 
 	if filter.LastName != nil {

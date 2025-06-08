@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: myuser 
+      POSTGRES_PASSWORD: mypass 
+      POSTGRES_DB: soccer 
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    networks:
+      - appnet
+    ports:
+      - "5432:5432"
+  soccer-api:
+    build: .
+    container_name: soccer-api
+    depends_on:
+      - postgres-db
+    environment:
+      # Web service config
+      WEB_READ_TIMEOUT: 5s
+      WEB_WRITE_TIMEOUT: 10s
+      WEB_IDLE_TIMEOUT: 120s
+      WEB_SHUTDOWN_TIMEOUT: 20s
+      WEB_API_HOST: "0.0.0.0:3000"
+      WEB_DEBUG_HOST: "0.0.0.0:4000"
+      JWT_KEY: secret_key
+      
+      # Database config
+      DB_USER:  myuser 
+      DB_PASSWORD: mypass 
+      DB_HOST: postgres-db
+      DB_NAME: soccer 
+      DB_MAX_IDLE_CONNS: "2"
+      DB_MAX_OPEN_CONNS: "10"
+      DB_DISABLE_TLS: "true"
+      
+      # Zipkin tracing
+      ZIPKIN_REPORTER_URI: "http://zipkin:9411/api/v2/spans"
+      ZIPKIN_SERVICE_NAME: soccer-api
+      ZIPKIN_PROBABILITY: "1.0"
+    ports:
+      - "3000:3000"
+      - "4000:4000"
+    networks:
+      - appnet
+
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - appnet
+
+volumes:
+  pgdata:
+
+networks:
+  appnet:

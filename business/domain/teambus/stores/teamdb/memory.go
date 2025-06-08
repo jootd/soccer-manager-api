@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-
-	"github.com/jootd/soccer-manager/business/domain/teambus"
 )
 
 type Memory struct {
@@ -16,7 +14,6 @@ type Memory struct {
 }
 
 func NewMemory() *Memory {
-
 	return &Memory{
 		mem: make(map[int]team),
 	}

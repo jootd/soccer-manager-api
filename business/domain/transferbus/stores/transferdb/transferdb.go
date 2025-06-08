@@ -3,8 +3,6 @@ package transferdb
 import (
 	"context"
 	"log"
-
-	"github.com/jootd/soccer-manager/business/domain/transferbus"
 )
 
 type Store struct {
