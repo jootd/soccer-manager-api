@@ -17,6 +17,8 @@ type Player struct {
 }
 
 type UpdatePlayer struct {
+	ID        int
+	TeamID    *int
 	FirstName *string
 	LastName  *string
 	Country   *string

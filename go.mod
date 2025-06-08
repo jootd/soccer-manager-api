@@ -7,4 +7,9 @@ require (
 	golang.org/x/crypto v0.39.0
 )
 
-require github.com/gorilla/mux v1.8.1 // indirect
+require github.com/gorilla/websocket v1.5.0 // indirect
+
+require (
+	github.com/arl/statsviz v0.6.0
+	github.com/gorilla/mux v1.8.1 // indirect
+)
