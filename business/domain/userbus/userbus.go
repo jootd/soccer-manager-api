@@ -26,7 +26,7 @@ type ExtBusiness interface {
 	NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error)
 	Get(ctx context.Context, username string) (User, error)
 	Create(ctx context.Context, new CreateUser) error
-	Update(ctx context.Context, user User, upd UpdateUser) error
+	Update(ctx context.Context, upd UpdateUser) error
 }
 
 type Extension func(ExtBusiness) ExtBusiness
@@ -95,7 +95,9 @@ func (ub *Business) Create(ctx context.Context, new CreateUser) error {
 
 	return nil
 }
-func (ub *Business) Update(ctx context.Context, user User, upd UpdateUser) error {
+func (ub *Business) Update(ctx context.Context, upd UpdateUser) error {
+
+	user := User{}
 
 	if upd.Username != nil {
 		user.Username = *upd.Username

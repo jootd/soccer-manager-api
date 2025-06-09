@@ -2,6 +2,8 @@ package teambus
 
 import (
 	"context"
+	"crypto/rand"
+	"errors"
 	"fmt"
 
 	"github.com/jootd/soccer-manager/business/sdk/sqldb"
@@ -12,28 +14,35 @@ const (
 	InitialTeamBudget = 5_000_000 //$
 )
 
+var (
+	ErrTeamNotFound = errors.New("team_not_found")
+)
+
 type Storer interface {
 	NewWithTx(tx sqldb.CommitRollbacker) (Storer, error)
+	GetByID(ctx context.Context, id int) (Team, error)
 	Query(ctx context.Context, query QueryFilter) ([]Team, error)
 	Update(ctx context.Context, updates Team) error
-	Create(ctx context.Context, team Team) error
+	Create(ctx context.Context, team Team) (int, error)
 }
 
 type ExtBusiness interface {
 	NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error)
+	GetByID(ctx context.Context, id int) (Team, error)
 	Query(ctx context.Context, query QueryFilter) ([]Team, error)
-	Update(ctx context.Context, team Team, updates UpdateTeam) error
+	Update(ctx context.Context, updates UpdateTeam) error
 	Create(ctx context.Context, team CreateTeam) error
+	AutoGenerate(ctx context.Context) (Team, error)
 }
 
 type Extension func(ExtBusiness) ExtBusiness
 
 type Business struct {
 	store Storer
-	log   *zap.Logger
+	log   *zap.SugaredLogger
 }
 
-func NewTeamBus(store Storer, log *zap.Logger, extensions ...Extension) ExtBusiness {
+func NewTeamBus(store Storer, log *zap.SugaredLogger, extensions ...Extension) ExtBusiness {
 	b := ExtBusiness(&Business{
 		store: store,
 		log:   log,
@@ -64,6 +73,15 @@ func (tb *Business) NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error) {
 
 }
 
+func (tb *Business) GetByID(ctx context.Context, id int) (Team, error) {
+	team, err := tb.store.GetByID(ctx, id)
+	if err != nil {
+		return Team{}, fmt.Errorf("teambus:GetByID:%w", err)
+	}
+
+	return team, nil
+}
+
 func (tb *Business) Query(ctx context.Context, query QueryFilter) ([]Team, error) {
 	teams, err := tb.store.Query(ctx, query)
 	if err != nil {
@@ -74,12 +92,23 @@ func (tb *Business) Query(ctx context.Context, query QueryFilter) ([]Team, error
 }
 
 // Generate generates random team
-func (tb *Business) Generate(ctx context.Context) {
+func (tb *Business) AutoGenerate(ctx context.Context) (Team, error) {
+	newTeam := Team{
+		Name:    rand.Text(),
+		Country: rand.Text()[:2],
+		Budget:  InitialTeamBudget,
+	}
+	id, err := tb.store.Create(ctx, newTeam)
+	if err != nil {
+		return Team{}, fmt.Errorf("teambus:AutoGenerate:%w", err)
+	}
 
+	newTeam.ID = id
+	return newTeam, nil
 }
 
 func (tb *Business) Create(ctx context.Context, new CreateTeam) error {
-	err := tb.store.Create(ctx, Team{
+	_, err := tb.store.Create(ctx, Team{
 		Name:    new.Name,
 		Country: new.Country,
 		Budget:  new.Budget,
@@ -89,12 +118,22 @@ func (tb *Business) Create(ctx context.Context, new CreateTeam) error {
 	}
 
 	return nil
-
 }
 
-func (tb *Business) Update(ctx context.Context, team Team, updates UpdateTeam) error {
-	//TODO : update logic
-	err := tb.store.Update(ctx, Team{})
+func (tb *Business) Update(ctx context.Context, upd UpdateTeam) error {
+	team := Team{
+		ID: upd.ID,
+	}
+
+	if upd.Country != nil {
+		team.Country = *upd.Country
+	}
+
+	if upd.Name != nil {
+		team.Name = *upd.Name
+	}
+
+	err := tb.store.Update(ctx, team)
 	if err != nil {
 		return fmt.Errorf("teambus:Update:%w", err)
 	}

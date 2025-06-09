@@ -1,6 +1,8 @@
 package vteambus
 
 import (
+	"fmt"
+
 	"github.com/jootd/soccer-manager/business/domain/playerbus"
 	"github.com/jootd/soccer-manager/business/domain/teambus"
 )
@@ -33,10 +35,13 @@ func FromTeam(team teambus.Team, players []playerbus.Player) TeamWithPlayers {
 			FirstName: p.FirstName,
 			LastName:  p.LastName,
 			Age:       p.Age.Value(),
+			Value:     p.Value,
 		}
 		teamValue += p.Value
 		viewPlayers = append(viewPlayers, viewPlayer)
 	}
+
+	fmt.Println("aqamde ver modis ")
 
 	return TeamWithPlayers{
 		ID:      team.ID,

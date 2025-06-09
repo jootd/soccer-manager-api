@@ -1,6 +1,8 @@
 package transferbus
 
-import "github.com/jootd/soccer-manager/business/types/transferstatus"
+import (
+	"github.com/jootd/soccer-manager/business/types/transferstatus"
+)
 
 type Transfer struct {
 	ID          int

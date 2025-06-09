@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+
+	"github.com/jootd/soccer-manager/business/domain/teambus"
 )
 
 type Memory struct {
@@ -62,9 +64,8 @@ func (dt *Memory) Create(ctx context.Context, new teambus.CreateTeam) (teambus.T
 	newId := dt.idSeq
 
 	newTeam := team{
-		ID:      newId,
-		Name:    new.Name,
-		Country: new.Country,
+		ID: newId,
+		// Name:    new.Name, Country: new.Country,
 	}
 
 	dt.mem[newId] = newTeam

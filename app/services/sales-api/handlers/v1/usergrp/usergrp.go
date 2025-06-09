@@ -7,7 +7,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jootd/soccer-manager/business/domain/playerbus"
+	"github.com/jootd/soccer-manager/business/domain/teambus"
 	"github.com/jootd/soccer-manager/business/domain/userbus"
+	"github.com/jootd/soccer-manager/business/sdk/sqldb"
 	v1Web "github.com/jootd/soccer-manager/business/sdk/v1"
 	"github.com/jootd/soccer-manager/business/sdk/v1/jwt"
 	"github.com/jootd/soccer-manager/foundation/web"
@@ -15,7 +18,10 @@ import (
 )
 
 type Handlers struct {
-	Bus userbus.ExtBusiness
+	UserBus   userbus.ExtBusiness
+	TeamBus   teambus.ExtBusiness
+	PlayerBus playerbus.ExtBusiness
+	Tx        sqldb.Beginner
 }
 
 func (h Handlers) Signup(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
@@ -25,7 +31,27 @@ func (h Handlers) Signup(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return fmt.Errorf("unable to decode payload: %w", err)
 	}
 
-	err := h.Bus.Create(ctx, newUser)
+	tx, err := h.Tx.Begin()
+	defer tx.Rollback()
+	if err != nil {
+		return fmt.Errorf("unable to start tx: %w", err)
+	}
+	userBusTx, err := h.UserBus.NewWithTx(tx)
+	if err != nil {
+		return fmt.Errorf("userbus.NewWithTx failed: %w", err)
+	}
+
+	teamBusTx, err := h.TeamBus.NewWithTx(tx)
+	if err != nil {
+		return fmt.Errorf("teambus.NewWithTx failed: %w", err)
+	}
+
+	playerTx, err := h.PlayerBus.NewWithTx(tx)
+	if err != nil {
+		return fmt.Errorf("teambus.NewWithTx failed: %w", err)
+	}
+
+	err = userBusTx.Create(ctx, newUser)
 	if err != nil {
 		if errors.Is(err, userbus.ErrUniqueUsername) {
 			return v1Web.NewRequestError(err, http.StatusConflict)
@@ -33,7 +59,31 @@ func (h Handlers) Signup(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return fmt.Errorf("user[%+v]: %w", &newUser, err)
 	}
 
-	return web.Respond(ctx, w, newUser, http.StatusCreated)
+	newTeam, err := teamBusTx.AutoGenerate(ctx)
+	if err != nil {
+		return fmt.Errorf("handler:Signup:%w", err)
+	}
+
+	err = playerTx.GenerateInitialBatch(ctx, newTeam.ID)
+	if err != nil {
+		return fmt.Errorf("handler.Signup:%w", err)
+	}
+
+	err = userBusTx.Update(ctx, userbus.UpdateUser{Username: &newUser.Username, TeamID: &newTeam.ID})
+	if err != nil {
+		return fmt.Errorf("handler.Signup:%w", err)
+	}
+
+	account := struct {
+		User userbus.CreateUser `json:"user"`
+		Team teambus.Team       `json:"team"`
+	}{
+		User: newUser,
+		Team: newTeam,
+	}
+
+	tx.Commit()
+	return web.Respond(ctx, w, account, http.StatusCreated)
 
 }
 
@@ -44,7 +94,7 @@ func (h Handlers) Signin(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return fmt.Errorf("unable to decode payload: %w", err)
 	}
 
-	user, err := h.Bus.Get(r.Context(), login.Username)
+	user, err := h.UserBus.Get(r.Context(), login.Username)
 	if err != nil {
 		if errors.Is(err, userbus.ErrNotFound) {
 			return v1Web.NewRequestError(err, http.StatusNotFound)
@@ -55,7 +105,7 @@ func (h Handlers) Signin(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return v1Web.NewRequestError(err, http.StatusUnauthorized)
 	}
 
-	token, err := jwt.GenerateJWT(user.Password)
+	token, err := jwt.GenerateJWT(user.Username)
 	if err != nil {
 		return v1Web.NewRequestError(fmt.Errorf("signin: usr[%+v]: %s", login, err.Error()), http.StatusInternalServerError)
 	}
@@ -65,7 +115,7 @@ func (h Handlers) Signin(ctx context.Context, w http.ResponseWriter, r *http.Req
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true,
+		// Secure:   false,
 		SameSite: http.SameSiteStrictMode,
 		Expires:  time.Now().Add(1 * time.Hour),
 	})

@@ -10,7 +10,7 @@ import (
 
 type Storer interface {
 	Query(ctx context.Context, query playerbus.QueryFilter) ([]playerbus.Player, error)
-	Update(ctx context.Context, player playerbus.UpdatePlayer) (playerbus.Player, error)
+	Update(ctx context.Context, player playerbus.Player) error
 }
 
 type Adapter struct {
@@ -34,9 +34,9 @@ func (a *Adapter) GetPlayerInfo(ctx context.Context, id int) (transferbus.Player
 
 // updates team for player
 func (a *Adapter) UpdateTeam(ctx context.Context, playerID, teamID int) error {
-	_, err := a.store.Update(ctx, playerbus.UpdatePlayer{
+	err := a.store.Update(ctx, playerbus.Player{
 		ID:     playerID,
-		TeamID: &teamID,
+		TeamID: teamID,
 	})
 
 	if err != nil {
@@ -47,9 +47,9 @@ func (a *Adapter) UpdateTeam(ctx context.Context, playerID, teamID int) error {
 }
 
 func (a *Adapter) UpdateValue(ctx context.Context, playerID int, newValue int64) error {
-	_, err := a.store.Update(ctx, playerbus.UpdatePlayer{
+	err := a.store.Update(ctx, playerbus.Player{
 		ID:    playerID,
-		Value: &newValue,
+		Value: newValue,
 	})
 	if err != nil {
 		return fmt.Errorf("playeradapter:UpdateValue:%w", err)

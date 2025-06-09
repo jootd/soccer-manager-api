@@ -7,7 +7,9 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/jootd/soccer-manager/business/sdk/sqldb"
 	"github.com/jootd/soccer-manager/business/types/transferstatus"
+	"go.uber.org/zap"
 )
 
 const (
@@ -16,9 +18,11 @@ const (
 )
 
 type Storer interface {
-	Create(ctx context.Context, t Transfer) error
+	NewWithTx(tx sqldb.CommitRollbacker) (Storer, error)
+	All(ctx context.Context) ([]Transfer, error)
+	Create(ctx context.Context, t Transfer) (int, error)
 	Query(ctx context.Context, query QueryFilter) ([]Transfer, error)
-	Update(ctx context.Context, update UpdateTransfer) (Transfer, error)
+	Update(ctx context.Context, update Transfer) error
 	// Delete(ctx context.Context, id int) error
 }
 
@@ -35,18 +39,56 @@ type TeamService interface {
 	UpdateBudget(ctx context.Context, teamID int, newBudget int64) error
 }
 
+type ExtBusiness interface {
+	NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error)
+	All(ctx context.Context) ([]Transfer, error)
+	ListForSale(ctx context.Context, playerID, sellerID int, askingPrice int64) error
+	Buy(ctx context.Context, transferID, buyerID int) error
+}
+
+type Extension func(ExtBusiness) ExtBusiness
+
 type Business struct {
 	store         Storer
+	log           *zap.SugaredLogger
 	playerService PlayerService
 	teamService   TeamService
 }
 
-func New(store Storer, ps PlayerService, ts TeamService) *Business {
-	return &Business{store, ps, ts}
+func NewTransferBus(store Storer, log *zap.SugaredLogger, ps PlayerService, ts TeamService, extensions ...Extension) ExtBusiness {
+	b := ExtBusiness(&Business{
+		store:         store,
+		log:           log,
+		playerService: ps,
+		teamService:   ts})
+
+	for i := len(extensions) - 1; i >= 0; i-- {
+		ext := extensions[i]
+		if ext != nil {
+			b = ext(b)
+		}
+	}
+
+	return b
+}
+
+func (tb *Business) NewWithTx(tx sqldb.CommitRollbacker) (ExtBusiness, error) {
+	storer, err := tb.store.NewWithTx(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	bus := &Business{
+		log:   tb.log,
+		store: storer,
+	}
+
+	return bus, nil
+
 }
 
 func (tc *Business) All(ctx context.Context) ([]Transfer, error) {
-	transfers, err := tc.store.Query(ctx, QueryFilter{})
+	transfers, err := tc.store.All(ctx)
 	if err != nil {
 		return []Transfer{}, fmt.Errorf("transferbus:market:%w", err)
 	}
@@ -55,12 +97,17 @@ func (tc *Business) All(ctx context.Context) ([]Transfer, error) {
 
 func (tc *Business) ListForSale(ctx context.Context, playerID, sellerID int, askingPrice int64) error {
 	//TODO: validation
-	return tc.store.Create(ctx, Transfer{
+	_, err := tc.store.Create(ctx, Transfer{
 		PlayerID:    playerID,
 		SellerID:    sellerID,
 		AskingPrice: askingPrice,
 		Status:      transferstatus.Listed,
 	})
+
+	if err != nil {
+		return fmt.Errorf("transferbus:ListForSale:%w", err)
+	}
+	return nil
 }
 
 func (tc *Business) Buy(ctx context.Context, transferID, buyerID int) error {
@@ -120,9 +167,9 @@ func (tc *Business) Buy(ctx context.Context, transferID, buyerID int) error {
 }
 
 func (tc *Business) markAsSold(ctx context.Context, transferID int) error {
-	_, err := tc.store.Update(ctx, UpdateTransfer{
+	err := tc.store.Update(ctx, Transfer{
 		ID:     transferID,
-		Status: &transferstatus.Sold,
+		Status: transferstatus.Sold,
 	})
 
 	if err != nil {

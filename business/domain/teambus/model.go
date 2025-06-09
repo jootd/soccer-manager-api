@@ -2,16 +2,16 @@ package teambus
 
 type Team struct {
 	ID      int
-	Name    string
-	Country string
-	Budget  int64
+	Name    string `json:"name"`
+	Country string `json:"country"`
+	Budget  int64  `json:"budget"`
 }
 
 type UpdateTeam struct {
-	ID      int
-	Name    *string
-	Country *string
-	Budget  *int64
+	ID      int     `json:"id"`
+	Name    *string `json:"name"`
+	Country *string `json:"country"`
+	Budget  *int64  `json:"-"`
 }
 
 type CreateTeam struct {

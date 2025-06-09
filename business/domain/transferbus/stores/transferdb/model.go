@@ -23,7 +23,7 @@ func toBusTransfer(db transfer) transferbus.Transfer {
 	}
 }
 
-func toDbTransfer(bus transferbus.Transfer) transfer {
+func toDBTransfer(bus transferbus.Transfer) transfer {
 	return transfer{
 		ID:          bus.ID,
 		PlayerID:    bus.PlayerID,
@@ -32,4 +32,12 @@ func toDbTransfer(bus transferbus.Transfer) transfer {
 		Status:      bus.Status.String(),
 	}
 
+}
+
+func toTransferBusSlice(dbTrans []transfer) []transferbus.Transfer {
+	var trans []transferbus.Transfer
+	for _, v := range dbTrans {
+		trans = append(trans, toBusTransfer(v))
+	}
+	return trans
 }
